@@ -1,0 +1,154 @@
+---
+title: "5200 P1"
+output: html_notebook
+---
+
+```{r}
+library(RSQLite)
+
+fpath = "./"
+dbfile = "BirdsDb.db"
+
+dbcon <- dbConnect(RSQLite::SQLite(), paste0(fpath, dbfile))
+dbExecute(dbcon, "PRAGMA foreign_keys = ON")
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS aircraft;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS airline;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS airport;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS flight;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS wildlife;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS remark;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS effect;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS wildlife_remains;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS incident;
+```
+
+Build the tables:
+
+```{sql connection=dbcon}
+CREATE TABLE aircraft(
+  id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  type VARCHAR(20) DEFAULT "Airplane",
+  make_model VARCHAR(256) NOT NULL,
+  num_engines INT,
+  is_large TINYINT(1) NOT NULL
+);
+```
+
+```{sql connection=dbcon}
+CREATE TABLE airline(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  operator VARCHAR(100) UNIQUE NOT NULL
+);
+```
+
+```{sql connection=dbcon}
+CREATE TABLE airport (
+  id INT PRIMARY KEY UNIQUE NOT NULL,
+  airport_name VARCHAR(256) UNIQUE NOT NULL,
+  origin_state VARCHAR(10) NOT NULL DEFAULT "N/A"
+);
+```
+
+```{sql connection=dbcon}
+CREATE TABLE flight (
+  id INT PRIMARY KEY UNIQUE NOT NULL AUTO_INCREMENT,
+  aircraft_id INT NOT NULL,
+  airline_id INT NOT NULL,
+  airport_id INT NOT NULL,
+  flight_date DATETIME NOT NULL DEFAULT DATETIME('now'),
+  FOREIGN KEY (aircraft_id) REFERENCES aircraft(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (airline_id) REFERENCES airline(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (airport_id) REFERENCES airport(id) ON DELETE CASCADE ON UPDATE CASCADE,
+);
+```
+
+```{sql connection=dbcon}
+CREATE TABLE wildlife(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  size VARCHAR(20) NOT NULL,
+  species VARCHAR(100) NOT NULL
+);
+```
+
+```{sql connection=dbcon}
+CREATE TABLE remark(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  content VARCHAR(1000) NOT NULL
+); 
+```
+
+```{sql connection=dbcon}
+CREATE TABLE effect(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  impact_to_flight ENUM("None", "Engine Shut Down", "Aborted Take-off", "Precautionary Landing", "Other") DEFAULT "None",
+  indicated_damage TINYINT ENUM("Caused damage", "No damage") DEFAULT "No damage",
+  number_of_people_injured INT NOT NULL DEFAULT 0,
+  number_wildlife_struck INT NOT NULL DEFAULT 0
+); 
+```
+
+```{sql connection=dbcon}
+CREATE TABLE condition(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  precipitaion VARCHAR(100) NOT NULL,
+  sky ENUM("No Cloud", "Some Cloud", "Overcast") NOT NULL DEFAULT "No Cloud"
+);
+```
+
+```{sql connection=dbcon}
+CREATE TABLE wildlife_remains(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  is_collected TINYINT(1) NOT NULL DEFAULT 0,
+  sent_to_smithsonian TINYINT(1) NOT NULL DEFAULT 0
+);
+```
+
+```{sql connection=dbcon}
+CREATE TABLE incident (
+  id INT PRIMARY KEY UNIQUE NOT NULL AUTO_INCREMENT,
+  flight_id INT NOT NULL,
+  wildlife_id INT NOT NULL,
+  remark_id INT NOT NULL,
+  effect_id INT NOT NULL,
+  condition_id INT NOT NULL,
+  remains_id INT NOT NULL,
+  phase_flight ENUM("Climb", "Landing Roll", "Approch", "Take-off run") NOT NULL,
+  height_flight INT NOT NULL,
+  wildlife_warning_received TINYINT(1) NOT NULL DEFAULT 0,
+  cost INT NOT NULL DEFAULT 0,
+  FOREIGN KEY (flight_id) REFERENCES flight(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (wildlife_id) REFERENCES wildlife(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (remark_id) REFERENCES remark(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (effect_id) REFERENCES effect(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (condition_id) REFERENCES condition(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (remains_id) REFERENCES wildlife_remains(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+```
+
